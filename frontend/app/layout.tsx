@@ -1,8 +1,9 @@
+// ============================================================
+// NO ECHO · 根布局
+// 不使用 Google Fonts（国内访问慢），改为系统字体
+// ============================================================
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "@/styles/globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "NO ECHO · 论文预检平台",
@@ -12,7 +13,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={inter.className}>{children}</body>
+      <body style={{ fontFamily: "'PingFang SC', 'Microsoft YaHei', sans-serif" }}>
+        {children}
+      </body>
     </html>
   );
 }

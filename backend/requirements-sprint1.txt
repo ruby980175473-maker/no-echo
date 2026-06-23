@@ -1,0 +1,12 @@
+# ============================================================
+# NO ECHO · Sprint 1 最小依赖（仅上传功能）
+# 安装命令：pip install -r requirements-sprint1.txt
+# 注意：正式开发时使用 requirements.txt（含所有 Sprint 依赖）
+# ============================================================
+
+fastapi==0.111.1
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9      # FastAPI 文件上传必须
+pydantic==2.7.4
+pydantic-settings==2.3.4
+python-dotenv==1.0.1
