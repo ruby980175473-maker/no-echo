@@ -1,0 +1,77 @@
+# ─── 环境变量（绝不提交到版本库）────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+!.env.local.example
+
+# ─── Node.js / Frontend ──────────────────────────────────────────────────────
+node_modules/
+.next/
+.nuxt/
+dist/
+build/
+out/
+.cache/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── Python / Backend ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.eggs/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ─── 模型文件（sentence-transformers 下载的大文件）──────────────────────────
+backend/app/models_cache/
+*.bin
+*.safetensors
+*.pt
+!backend/app/models/schemas.py
+!backend/app/models/db_models.py
+
+# ─── 临时上传文件 ─────────────────────────────────────────────────────────────
+backend/uploads/
+backend/tmp/
+*.docx.tmp
+
+# ─── IDE / 编辑器 ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+docker/data/
+
+# ─── 测试产物 ─────────────────────────────────────────────────────────────────
+tests/e2e/results/
+playwright-report/
+test-results/

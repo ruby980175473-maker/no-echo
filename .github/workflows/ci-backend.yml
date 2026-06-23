@@ -1,0 +1,72 @@
+# ============================================================
+# NO ECHO · 后端 CI
+# 触发：PR 到 main/dev，或 push 到 main/dev
+# ============================================================
+name: CI · Backend
+
+on:
+  push:
+    branches: [main, dev]
+    paths: [backend/**, .github/workflows/ci-backend.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: [backend/**]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev dependencies
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff lint
+        working-directory: backend
+        run: ruff check app/
+
+      - name: Mypy type check
+        working-directory: backend
+        run: mypy app/
+
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    env:
+      # CI 环境使用假 Key，第三方 API 调用通过 mock 处理
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_ANON_KEY: placeholder
+      SUPABASE_SERVICE_ROLE_KEY: placeholder
+      BING_SEARCH_API_KEY: placeholder
+      GPTZERO_API_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev dependencies
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        working-directory: backend
+        run: pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          flags: backend

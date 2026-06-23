@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+  }
+}
+
+@layer components {
+  /* 段落风险高亮块（ParagraphView 组件使用）*/
+  .risk-highlight-high   { @apply bg-red-50    border-l-4 border-red-500    px-3 py-2 rounded-r; }
+  .risk-highlight-medium { @apply bg-orange-50 border-l-4 border-orange-400 px-3 py-2 rounded-r; }
+  .risk-highlight-low    { @apply bg-yellow-50 border-l-4 border-yellow-400 px-3 py-2 rounded-r; }
+}

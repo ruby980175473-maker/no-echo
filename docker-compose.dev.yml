@@ -1,0 +1,53 @@
+# ============================================================
+# NO ECHO · 开发环境 Docker Compose
+# 特性：前后端均挂载源码目录 + 热重载
+# ============================================================
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./backend:/app                    # 挂载源码，支持热重载
+      - backend_venv:/app/venv            # venv 持久化，避免重复安装
+      - model_cache:/app/models_cache     # sentence-transformers 模型缓存
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./frontend:/app                   # 挂载源码，支持热重载
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: npm run dev
+
+volumes:
+  backend_venv:
+  model_cache:
+  frontend_node_modules:

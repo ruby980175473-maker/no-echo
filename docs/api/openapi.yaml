@@ -1,0 +1,142 @@
+openapi: "3.1.0"
+info:
+  title: NO ECHO API
+  version: "1.0.0"
+  description: 论文预检平台后端 API · 重复风险 × AIGC风险 × 格式检查
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发环境
+  - url: https://api.no-echo.app
+    description: 生产环境
+
+paths:
+  /health:
+    get:
+      summary: 健康检查
+      tags: [system]
+      responses:
+        "200":
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  version: { type: string, example: "1.0.0" }
+
+  /api/upload:
+    post:
+      summary: 上传论文 DOCX 文件
+      tags: [upload]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 论文 DOCX 文件（必填，≤20MB）
+                template:
+                  type: string
+                  format: binary
+                  description: 格式模板 DOCX 文件（可选）
+      responses:
+        "202":
+          description: 上传成功，检测任务已创建
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "413":
+          description: 文件超过大小限制
+        "415":
+          description: 不支持的文件格式
+
+  /api/status/{job_id}:
+    get:
+      summary: 查询检测进度
+      tags: [status]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: 进度信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "404":
+          description: job_id 不存在
+
+  /api/results/{job_id}/summary:
+    get:
+      summary: 获取三类风险总览
+      tags: [results]
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: 总览数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+
+components:
+  schemas:
+    UploadResponse:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending] }
+        message: { type: string }
+
+    StatusResponse:
+      type: object
+      properties:
+        job_id: { type: string }
+        status:
+          type: string
+          enum: [pending, parsing, checking, completed, failed]
+        progress:
+          type: object
+          properties:
+            parsing:      { type: boolean }
+            format_check: { type: boolean }
+            similarity:   { type: boolean }
+            aigc:         { type: boolean }
+        estimated_seconds_remaining: { type: integer, nullable: true }
+
+    SummaryResponse:
+      type: object
+      properties:
+        job_id:       { type: string }
+        file_name:    { type: string }
+        completed_at: { type: string, format: date-time }
+        summary:
+          type: object
+          properties:
+            similarity: { $ref: "#/components/schemas/RiskSummaryCard" }
+            aigc:       { $ref: "#/components/schemas/RiskSummaryCard" }
+            format:     { $ref: "#/components/schemas/RiskSummaryCard" }
+
+    RiskSummaryCard:
+      type: object
+      properties:
+        risk_level:          { type: string, enum: [high, medium, low, none] }
+        risk_star:           { type: integer, minimum: 1, maximum: 5 }
+        affected_paragraphs: { type: integer, nullable: true }
+        issue_count:         { type: integer, nullable: true }
+        description:         { type: string }

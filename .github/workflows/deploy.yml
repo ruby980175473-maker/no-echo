@@ -1,0 +1,30 @@
+# ============================================================
+# NO ECHO · 自动部署（仅 main 分支 push 触发）
+# 前端 → Vercel，后端 → Railway
+# ============================================================
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        # TODO: 配置 Vercel CLI 或使用 vercel/action
+        # 需要设置 GitHub Secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+        run: echo "TODO: 配置 Vercel 部署"
+
+  deploy-backend:
+    name: Deploy Backend to Railway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Railway
+        # TODO: 配置 Railway CLI
+        # 需要设置 GitHub Secrets: RAILWAY_TOKEN
+        run: echo "TODO: 配置 Railway 部署"
