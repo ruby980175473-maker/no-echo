@@ -1,11 +1,7 @@
 # ============================================================
-# NO ECHO · 上传路由
-# Sprint 1 实现：接收文件 → 校验 → 保存到本地 → 返回 job_id
-#
-# Sprint 2+ 需要替换的地方（已用 # TODO[S2] 标注）：
-#   - 本地 UPLOAD_DIR 替换为 Supabase Storage
-#   - 在 jobs 数据库表中创建记录
-#   - 触发异步检测任务
+# NO ECHO · 上传路由（Sprint 2 更新）
+# Sprint 1: 接收文件 → 保存本地
+# Sprint 2: 接收文件 → 保存本地 → 解析为 DocumentModel → 存 JSON
 # ============================================================
 
 import uuid
@@ -15,12 +11,11 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.config import settings
 from app.models.schemas import UploadResponse
+from app.modules.parser.docx_parser import parse_document
 from app.utils.file_validator import validate_docx
 
 router = APIRouter()
 
-# Sprint 1: 本地临时存储目录
-# TODO[S2]: 替换为 Supabase Storage（supabase.storage.from_("uploads").upload(...)）
 UPLOAD_DIR = Path("uploads")
 
 
@@ -28,55 +23,52 @@ UPLOAD_DIR = Path("uploads")
     "/upload",
     response_model=UploadResponse,
     status_code=202,
-    summary="上传论文 DOCX 文件",
-    description="校验文件格式和大小，保存到本地，返回任务 ID。Sprint 1 不触发任何检测逻辑。",
+    summary="上传论文 DOCX 文件（Sprint 2：上传后自动解析为 DocumentModel）",
 )
 async def upload_file(
-    file: UploadFile = File(..., description="论文 .docx 文件（必填，最大 20MB）"),
-    template: UploadFile | None = File(default=None, description="格式模板 .docx（可选）"),
+    file: UploadFile = File(...),
+    template: UploadFile | None = File(default=None),
 ) -> UploadResponse:
-    # ── Step 1: 校验文件格式 ──────────────────────────────────
+    # ── Step 1: 校验格式 ──────────────────────────────────────
     await validate_docx(file)
 
-    # ── Step 2: 读取文件内容到内存 ────────────────────────────
+    # ── Step 2: 读取并校验大小 ────────────────────────────────
     content = await file.read()
-
-    # ── Step 3: 校验文件大小 ──────────────────────────────────
     max_bytes = settings.max_file_size_mb * 1024 * 1024
     if len(content) > max_bytes:
-        size_mb = len(content) / 1024 / 1024
         raise HTTPException(
             status_code=413,
-            detail=(
-                f"文件太大（{size_mb:.1f}MB），"
-                f"最大支持 {settings.max_file_size_mb}MB"
-            ),
+            detail=f"文件太大（{len(content)/1024/1024:.1f}MB），最大 {settings.max_file_size_mb}MB",
         )
-
     if len(content) == 0:
-        raise HTTPException(status_code=400, detail="文件内容为空，请重新选择文件")
+        raise HTTPException(status_code=400, detail="文件内容为空")
 
-    # ── Step 4: 生成唯一任务 ID ───────────────────────────────
+    # ── Step 3: 保存 DOCX 到本地 ──────────────────────────────
     job_id = str(uuid.uuid4())
-
-    # ── Step 5: 保存文件到本地 ────────────────────────────────
-    # TODO[S2]: 替换为：
-    #   supabase = request.app.state.supabase
-    #   supabase.storage.from_("uploads").upload(f"{job_id}.docx", content)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = UPLOAD_DIR / f"{job_id}.docx"
-    file_path.write_bytes(content)
+    docx_path = UPLOAD_DIR / f"{job_id}.docx"
+    docx_path.write_bytes(content)
 
-    # ── Step 6: 在数据库创建 job 记录 ─────────────────────────
-    # TODO[S2]: 替换为：
-    #   supabase.table("jobs").insert({
-    #       "id": job_id, "status": "pending",
-    #       "file_name": file.filename, "file_path": str(file_path)
-    #   }).execute()
+    # ── Step 4: 解析为 DocumentModel 并保存 JSON ─────────────
+    # Sprint 2 新增：所有后续检测模块读此 JSON，不再重新解析 Word
+    # TODO[S2-DB]: 同时写入 Supabase jobs 表（status="parsed"）
+    try:
+        doc_model = parse_document(docx_path)
+        json_content = doc_model.model_dump_json(indent=2)
+        json_path = UPLOAD_DIR / f"{job_id}.json"
+        json_path.write_text(json_content, encoding="utf-8")
+        parse_summary = (
+            f"解析完成：{doc_model.metadata.heading_count} 个标题，"
+            f"{doc_model.metadata.paragraph_count} 段正文，"
+            f"{doc_model.metadata.reference_count} 条参考文献"
+        )
+    except Exception as e:
+        # 解析失败不影响上传结果（文件已保存），记录错误
+        parse_summary = f"文件已保存，解析异常（{type(e).__name__}）"
 
     size_kb = len(content) / 1024
     return UploadResponse(
         job_id=job_id,
         status="pending",
-        message=f"上传成功：{file.filename}（{size_kb:.0f} KB）",
+        message=f"上传成功：{file.filename}（{size_kb:.0f} KB）｜{parse_summary}",
     )
