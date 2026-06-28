@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import upload, status, results, spec   # ← 新增 spec
+from app.routers import upload, status, results, spec, schools  # ← 新增 spec / schools
 
 
 @asynccontextmanager
@@ -40,7 +40,8 @@ app.add_middleware(
 app.include_router(upload.router,  prefix="/api", tags=["upload"])
 app.include_router(status.router,  prefix="/api", tags=["status"])
 app.include_router(results.router, prefix="/api", tags=["results"])
-app.include_router(spec.router,    prefix="/api", tags=["spec"])    # ← 新增
+app.include_router(spec.router,    prefix="/api", tags=["spec"])
+app.include_router(schools.router, prefix="/api", tags=["schools"])  # ← 新增
 
 
 @app.get("/health", tags=["system"])
